@@ -29,9 +29,8 @@ def get_real_price():
                 if "الكفاح" in clean_text:
                     idx = clean_text.find("الكفاح")
                     context = clean_text[idx:idx+250]
-                    
-                    # القناص: يبحث عن أي رقم مكون من 4 مراتب بعد كلمة "بيع" أو "شراء"
-                    prices = re.findall(r'\b[1-9]\d{3}\b', context)
+                    # هذا السطر الجديد راح يتجاهل أي رقم يبدأ بـ 20 (السنة) ويركز بس على الـ 1500 أو 1400 أو 1600
+prices = re.findall(r'\b(?!20\d{2})[1-9]\d{3}\b', context)
                     
                     if len(prices) >= 2:
                         prices = sorted(list(set([int(p) for p in prices])))
