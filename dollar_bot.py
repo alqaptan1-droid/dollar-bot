@@ -22,19 +22,17 @@ def get_real_price():
             res = scraper.get(url, timeout=15)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, 'html.parser')
+                # تحويل النص وتنظيفه
                 clean_text = soup.get_text(separator=" ").translate(trans_table).replace("،", "").replace(",", "").replace(".", "")
                 
-                if "الكفاح" in clean_text:
-                    idx = clean_text.find("الكفاح")
-                    context = clean_text[idx:idx+250]
-                    
-                    # القناص: يستخرج أرقام 4 مراتب، يستثني اللي تبدأ بـ 20 (التاريخ)، ويستثني أقل من 1400 (الرسمي)
-                    raw_prices = re.findall(r'\b(?!20\d{2})[1-9]\d{3}\b', context)
-                    prices = [int(p) for p in set(raw_prices) if int(p) >= 1400]
-                    
-                    if len(prices) >= 2:
-                        prices = sorted(prices)
-                        return prices[-1], prices[0] # الأعلى بيع، الأقل شراء
+                # البحث عن أي أرقام من 4 مراتب تبدأ بـ 1 (لأن السعر حالياً 1400-1699)
+                # وتستثني السنة (2026) والسعر الرسمي (1310)
+                all_numbers = re.findall(r'\b(1[4-6]\d{2})\b', clean_text)
+                
+                prices = sorted(list(set([int(p) for p in all_numbers])))
+                
+                if len(prices) >= 2:
+                    return prices[-1], prices[0] # الأعلى والاقل
         except Exception:
             continue
     return None, None
