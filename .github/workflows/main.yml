@@ -1,22 +1,21 @@
 name: Run Dollar Bot
 on:
-  push:
   schedule:
-    - cron: '*/10 * * * *' # يشتغل كل 10 دقائق
+    - cron: '*/10 * * * *' # هذا السطر هو المسؤول عن الـ 10 دقايق
   workflow_dispatch:
-jobs: 
+jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v2
-        with: {python-version: '3.9'}
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
       - name: Install dependencies
-        run: pip install -r requirements.txt
-      - name: Run Bot
+        run: pip install requests cloudscraper beautifulsoup4
+      - name: Run script
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: python dollar_bot.py
- 
- 
