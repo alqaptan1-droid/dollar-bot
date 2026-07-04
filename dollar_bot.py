@@ -5,7 +5,6 @@ import requests
 import os
 
 # ================= الإعدادات =================
-# قراءة التوكن بأمان من إعدادات GitHub
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = "@DollarNowIQ"
 
@@ -13,7 +12,6 @@ sites = [
     "https://dollar-iraq.com",
     "https://iraqprices.com"
 ]
-
 # ===============================================
 
 def normalize_arabic_numbers(text):
@@ -21,9 +19,21 @@ def normalize_arabic_numbers(text):
     arabic_digits = '٠١٢٣٤٥٦٧٨٩'
     english_digits = '0123456789'
     translation_table = str.maketrans(arabic_digits, english_digits)
-    text = text.translate(translation_table)
-    text = text.replace("،", ",")
-    return text
+    return text.translate(translation_table).replace("،", ",")
+
+def get_last_posted_prices():
+    """خدعة ذكية: قراءة آخر رسالة من القناة حتى نتجنب التكرار"""
+    try:
+        channel_name = CHANNEL_ID.replace("@", "")
+        # ندخل لنسخة الويب من القناة
+        res = requests.get(f"https://t.me/s/{channel_name}")
+        soup = BeautifulSoup(res.text, 'html.parser')
+        messages = soup.find_all('div', class_='tgme_widget_message_text')
+        if messages:
+            return messages[-1].text # نرجع نص آخر رسالة
+    except:
+        pass
+    return ""
 
 def get_price_details():
     scraper = cloudscraper.create_scraper()
@@ -34,10 +44,8 @@ def get_price_details():
             
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, "html.parser")
-                raw_text = soup.get_text(" ", strip=True)
-                normalized_text = normalize_arabic_numbers(raw_text)
+                normalized_text = normalize_arabic_numbers(soup.get_text(" ", strip=True))
 
-                # تنسيق الأسماء لتتناسب مع التنسيق العريض داخل النجمات
                 markets = {
                     "الكفاح": "بورصة الكفاح🔺",
                     "الحارثية": "بورصة الحارثية🔺",
@@ -67,9 +75,10 @@ def get_price_details():
                                 if val not in valid_prices:
                                     valid_prices.append(val)
                         
+                        # 🎯 التعديل هنا: ناخذ أعلى وأقل سعر من "كل" الأرقام الموجودة بالمربع
                         if len(valid_prices) >= 2:
-                            sell_p = max(valid_prices[:2])
-                            buy_p = min(valid_prices[:2])
+                            sell_p = max(valid_prices)
+                            buy_p = min(valid_prices)
                             return market_name, sell_p, buy_p
                         
                         elif len(valid_prices) == 1:
@@ -85,15 +94,10 @@ def send_message(msg):
     data = {
         "chat_id": CHANNEL_ID,
         "text": msg,
-        "parse_mode": "Markdown",       # 🎯 تفعيل التنسيق الاحترافي (الخط العريض)
-        "disable_web_page_preview": True # إلغاء المعاينة للروابط تماماً
+        "parse_mode": "Markdown",
+        "disable_web_page_preview": True
     }
-    try:
-        response = requests.post(api, json=data)
-        if response.status_code != 200:
-            print(f"⚠️ خطأ في التيليجرام: {response.text}")
-    except Exception as e:
-        print(f"❌ فشل إرسال الرسالة: {e}")
+    requests.post(api, json=data)
 
 # ================= نقطة التشغيل =================
 if __name__ == "__main__":
@@ -103,34 +107,41 @@ if __name__ == "__main__":
     if result:
         market, sell_price, buy_price = result
         
-        # تنسيق الأرقام مع الفواصل (مثل: 1,543 و 154,300)
         sell_formatted = f"{sell_price:,}"
         buy_formatted = f"{buy_price:,}"
         sell_100 = f"{sell_price * 100:,}"
         buy_100 = f"{buy_price * 100:,}"
         
-        # 🎯 صياغة الكليشة الملكية مالتك بالملي
-        if sell_price != buy_price:
-            message = (
-                f"💵 *تحديث سعر الدولار الآن*\n\n"
-                f"📍 *{market}*\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"📈 *البيع:* {sell_formatted} دينار ➔ *{sell_100}*\n"
-                f"📉 *الشراء:* {buy_formatted} دينار ➔ *{buy_100}*\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"https://t.me/DollarNowIQ"
-            )
-        else:
-            message = (
-                f"💵 *تحديث سعر الدولار الآن*\n\n"
-                f"📍 *{market}*\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"💰 *السعر:* {sell_formatted} دينار ➔ *{sell_100}*\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"https://t.me/DollarNowIQ"
-            )
+        # فحص الذاكرة: هل السعر نفسه موجود بآخر رسالة؟
+        last_message_text = get_last_posted_prices()
+        clean_market_name = market.replace("🔺", "").replace("🔹", "").replace("🏬", "").strip()
         
-        send_message(message)
-        print(f"📨 تم النشر بالتنسيق الاحترافي لـ {market}")
+        # إذا اسم السوق وسعر البيع وسعر الشراء موجودات نصاً بالرسالة السابقة.. نغلس!
+        if clean_market_name in last_message_text and sell_formatted in last_message_text and buy_formatted in last_message_text:
+            print("⏸️ الأسعار مطابقة لآخر رسالة في القناة. لن يتم النشر لتجنب الإزعاج.")
+        else:
+            # 🎯 السعر جديد! صياغة الكليشة الملكية والنشر
+            if sell_price != buy_price:
+                message = (
+                    f"💵 *تحديث سعر الدولار الآن*\n\n"
+                    f"📍 *{market}*\n"
+                    f"━━━━━━━━━━━━━━━━━\n"
+                    f"📈 *البيع:* {sell_formatted} دينار ➔ *{sell_100}*\n"
+                    f"📉 *الشراء:* {buy_formatted} دينار ➔ *{buy_100}*\n"
+                    f"━━━━━━━━━━━━━━━━━\n"
+                    f"https://t.me/DollarNowIQ"
+                )
+            else:
+                message = (
+                    f"💵 *تحديث سعر الدولار الآن*\n\n"
+                    f"📍 *{market}*\n"
+                    f"━━━━━━━━━━━━━━━━━\n"
+                    f"💰 *السعر:* {sell_formatted} دينار ➔ *{sell_100}*\n"
+                    f"━━━━━━━━━━━━━━━━━\n"
+                    f"https://t.me/DollarNowIQ"
+                )
+            
+            send_message(message)
+            print(f"📨 تم النشر بنجاح بالتنسيق الاحترافي لـ {market}")
     else:
         print("❌ لم يتم العثور على أسعار حالياً.")
