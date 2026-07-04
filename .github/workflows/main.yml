@@ -2,8 +2,8 @@ name: Run Dollar Bot
 on:
   push:
   schedule:
-    - cron: '0 * * * *' # يشتغل كل ساعة
-  workflow_dispatch: # حتى تكدر تشغله يدوياً
+    - cron: '*/10 * * * *' # يشتغل كل 10 دقائق
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
