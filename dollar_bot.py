@@ -1,37 +1,44 @@
 import os
-import requests
 import re
+import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = "@DollarNowIQ"
+URL = "https://iraqprices.com/"
 
 def get_real_price():
-    # استخدمنا موقع مختلف كلياً
-    url = "https://iraqprices.com/dollar-to-iqd"
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-    
+    scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True})
     try:
-        # هنا نستخدم requests العادية مع headers حتى لا يكتشفنا كـ "بوت"
-        res = requests.get(url, headers=headers, timeout=15)
+        # إضافة headers قوية لتبدو كأننا متصفح حقيقي
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        res = scraper.get(URL, headers=headers, timeout=20)
+        
         if res.status_code == 200:
             soup = BeautifulSoup(res.text, 'html.parser')
-            text = soup.get_text()
+            # استخراج النص من كامل الصفحة
+            text = soup.get_text(separator=" ")
+            text = text.replace(",", "").replace(".", "")
             
-            # بحث مباشر عن أي رقم بين 1400 و 1600 في نص الموقع
+            # البحث عن الأسعار (نطاق 1400 - 1699)
             prices = re.findall(r'\b(1[4-6]\d{2})\b', text)
             
-            if len(prices) >= 2:
+            if prices:
                 unique_prices = sorted(list(set([int(p) for p in prices])))
-                return unique_prices[-1], unique_prices[0]
+                # إذا وجدنا أكثر من سعر، الأول هو الشراء والأخير هو البيع
+                if len(unique_prices) >= 2:
+                    return unique_prices[-1], unique_prices[0]
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error fetching data: {e}")
     return None, None
 
 if __name__ == "__main__":
     sell, buy = get_real_price()
     if sell and buy:
-        print(f"✅ تم سحب الأسعار: {sell} بيع / {buy} شراء")
-        # .. (باقي كود النشر تليجرام) ..
+        print(f"✅ تم السحب: {sell} بيع / {buy} شراء")
+        # هنا أضف كود النشر الخاص بك
     else:
-        print("❌ فشل سحب البيانات - حاول تغيير الموقع أو المصدر.")
+        print("❌ فشل السحب - الموقع يحتاج تحديث كود أو حظر الـ IP")
