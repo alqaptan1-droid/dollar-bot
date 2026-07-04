@@ -52,6 +52,7 @@ def get_last_channel_message():
         pass
     return ""
 
+
 # ================= نقطة التشغيل =================
 if __name__ == "__main__":
     sell, buy, source = get_real_price()
@@ -59,26 +60,20 @@ if __name__ == "__main__":
     if sell and buy:
         print(f"📡 تم جلب الأسعار بنجاح من موقع: {source}")
         sell_str = f"{sell:,}"
-        last_message = get_last_channel_message()
         
-        if sell_str in last_message:
-            print(f"⏸️ السعر مطابق لآخر رسالة ({sell}).")
-        else:
-            message = (
-                f"💵 *تحديث سعر الدولار الآن*\n\n"
-                f"📍¦ *بورصة الكفاح*\n"
-                f"🔻¦ {sell_str} دينار ➔ {sell * 100:,}\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"https://t.me/DollarNowIQ"
-            )
-            requests.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
-                json={"chat_id": CHANNEL_ID, "text": message, "parse_mode": "Markdown"}
-            )
-            print(f"✅ تم النشر بنجاح: {sell}")
+        # قمنا بحذف شرط المقارنة (last_message) تماماً
+        message = (
+            f"💵 *تحديث سعر الدولار الآن*\n\n"
+            f"📍¦ *بورصة الكفاح*\n"
+            f"🔻¦ {sell_str} دينار ➔ {sell * 100:,}\n"
+            f"━━━━━━━━━━━━━━━━━\n"
+            f"https://t.me/DollarNowIQ"
+        )
+        
+        requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
+            json={"chat_id": CHANNEL_ID, "text": message, "parse_mode": "Markdown"}
+        )
+        print(f"✅ تم النشر بنجاح: {sell}")
     else:
         print("❌ لم يتم العثور على أسعار مطابقة.")
-
-
-
-
