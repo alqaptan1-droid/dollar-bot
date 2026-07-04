@@ -13,7 +13,6 @@ def get_real_price():
     urls = ["https://dollar-iraq.com", "https://iraqprices.com"]
     scraper = cloudscraper.create_scraper()
     
-    # لتحويل الأرقام العربية إلى إنجليزية
     arabic_digits = '٠١٢٣٤٥٦٧٨٩'
     english_digits = '0123456789'
     trans_table = str.maketrans(arabic_digits, english_digits)
@@ -23,18 +22,19 @@ def get_real_price():
             res = scraper.get(url, timeout=15)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, 'html.parser')
-                # تنظيف النص من أكواد HTML
                 clean_text = soup.get_text(separator=" ").translate(trans_table).replace("،", "").replace(",", "").replace(".", "")
                 
                 if "الكفاح" in clean_text:
                     idx = clean_text.find("الكفاح")
                     context = clean_text[idx:idx+250]
-                    # هذا السطر الجديد راح يتجاهل أي رقم يبدأ بـ 20 (السنة) ويركز بس على الـ 1500 أو 1400 أو 1600
-prices = re.findall(r'\b(?!20\d{2})[1-9]\d{3}\b', context)
+                    
+                    # القناص: يستخرج أرقام 4 مراتب، يستثني اللي تبدأ بـ 20 (التاريخ)، ويستثني أقل من 1400 (الرسمي)
+                    raw_prices = re.findall(r'\b(?!20\d{2})[1-9]\d{3}\b', context)
+                    prices = [int(p) for p in set(raw_prices) if int(p) >= 1400]
                     
                     if len(prices) >= 2:
-                        prices = sorted(list(set([int(p) for p in prices])))
-                        return prices[-1], prices[0] # الأعلى بيع، والأقل شراء
+                        prices = sorted(prices)
+                        return prices[-1], prices[0] # الأعلى بيع، الأقل شراء
         except Exception:
             continue
     return None, None
@@ -64,7 +64,6 @@ if __name__ == "__main__":
         
         last_message = get_last_channel_message()
         
-        # شرط عدم التكرار
         if sell_str in last_message and buy_str in last_message:
             print(f"⏸️ السعر مطابق لآخر رسالة ({sell}/{buy}). لن يتم النشر.")
         else:
@@ -84,4 +83,4 @@ if __name__ == "__main__":
             )
             print(f"✅ تم النشر بنجاح: {sell} بيع / {buy} شراء")
     else:
-        print("❌ فشل في جلب الأسعار.")
+        print("❌ فشل في جلب أسعار منطقية من المواقع.")
