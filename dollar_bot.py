@@ -10,13 +10,9 @@ CHANNEL_ID = "@DollarNowIQ"
 
 # ================= دالة سحب الأسعار =================
 def get_real_price():
-    # وضعنا المصادر في قاموس لنعرف اسم الموقع بسهولة
-    sites = {
-        "Iraq-Prices": "https://iraqprices.com"
-    }
+    sites = {"Iraq-Prices": "https://iraqprices.com"}
     scraper = cloudscraper.create_scraper()
-    
-    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
+    arabic_digits = '٠١٢٣٤٥٤٦٧٨٩'
     english_digits = '0123456789'
     trans_table = str.maketrans(arabic_digits, english_digits)
     
@@ -34,7 +30,6 @@ def get_real_price():
                     
                     if len(prices) >= 2:
                         prices = sorted(list(set([int(p) for p in prices])))
-                        # نرجع الأسعار ومعها اسم الموقع
                         return prices[-1], prices[0], name 
         except Exception as e:
             print(f"Error reading {name}: {e}")
@@ -60,17 +55,13 @@ if __name__ == "__main__":
     sell, buy, source = get_real_price()
     
     if sell and buy:
-        # هنا يطبع المصدر في سجل الـ Logs
         print(f"📡 تم جلب الأسعار بنجاح من موقع: {source}")
-        
-        sell_str, buy_str = f"{sell:,}", f"{buy:,}"
+        sell_str = f"{sell:,}"
         last_message = get_last_channel_message()
         
-        if sell_str in last_message and buy_str in last_message:
-            print(f"⏸️ السعر مطابق لآخر رسالة ({sell}/{buy}).")
-else:
-            # هنا التنسيق الجديد الذي طلبته
-            # ملاحظة: {sell * 100:,} يعني السعر مضروب في 100 (لتحويل الـ 15.58 إلى 155,800)
+        if sell_str in last_message:
+            print(f"⏸️ السعر مطابق لآخر رسالة ({sell}).")
+        else:
             message = (
                 f"💵 *تحديث سعر الدولار الآن*\n\n"
                 f"📍¦ *بورصة الكفاح*🔺\n"
@@ -78,11 +69,10 @@ else:
                 f"━━━━━━━━━━━━━━━━━\n"
                 f"https://t.me/DollarNowIQ"
             )
-            
             requests.post(
                 f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
                 json={"chat_id": CHANNEL_ID, "text": message, "parse_mode": "Markdown"}
             )
-            print(f"✅ تم النشر بنجاح: {sell} بيع")
-            else:
+            print(f"✅ تم النشر بنجاح: {sell}")
+    else:
         print("❌ لم يتم العثور على أسعار مطابقة.")
