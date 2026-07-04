@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '*/10 * * * *' # يشتغل كل 10 دقائق
   workflow_dispatch:
-jobs:
+jobs: 
   build:
     runs-on: ubuntu-latest
     steps:
