@@ -1,73 +1,37 @@
 import os
-import re
 import requests
-import cloudscraper
+import re
 from bs4 import BeautifulSoup
 
-# ================= الإعدادات =================
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = "@DollarNowIQ"
-TARGET_URL = "https://dollar-iraq.com"
 
-# ================= دالة سحب الأسعار الموجهة =================
 def get_real_price():
-    scraper = cloudscraper.create_scraper()
+    # استخدمنا موقع مختلف كلياً
+    url = "https://iraqprices.com/dollar-to-iqd"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    
     try:
-        res = scraper.get(TARGET_URL, timeout=15)
+        # هنا نستخدم requests العادية مع headers حتى لا يكتشفنا كـ "بوت"
+        res = requests.get(url, headers=headers, timeout=15)
         if res.status_code == 200:
             soup = BeautifulSoup(res.text, 'html.parser')
-            # استخراج النص وتنظيفه
-            text = soup.get_text(separator=" ")
-            text = text.replace("،", "").replace(",", "").replace(".", "")
+            text = soup.get_text()
             
-            # فلتر: أي رقم يتكون من 4 مراتب ويبدأ بـ 14, 15, أو 16
-            # هذا يضمن استبعاد (1310 الرسمي) واستبعاد (2026 السنة)
+            # بحث مباشر عن أي رقم بين 1400 و 1600 في نص الموقع
             prices = re.findall(r'\b(1[4-6]\d{2})\b', text)
             
-            if prices:
-                # تحويل الأرقام لنوع int وعزل القيم الفريدة
+            if len(prices) >= 2:
                 unique_prices = sorted(list(set([int(p) for p in prices])))
-                
-                # نأخذ أكبر رقم للبيع وأصغر رقم للشراء من القائمة المفلترة
-                if len(unique_prices) >= 2:
-                    return unique_prices[-1], unique_prices[0]
-                elif len(unique_prices) == 1:
-                    return unique_prices[0], unique_prices[0]
+                return unique_prices[-1], unique_prices[0]
     except Exception as e:
         print(f"Error: {e}")
     return None, None
 
-# ================= دالة فحص التغيير والنشر =================
-def get_last_channel_message():
-    try:
-        scraper = cloudscraper.create_scraper()
-        res = scraper.get(f"https://t.me/s/{CHANNEL_ID.replace('@', '')}")
-        if res.status_code == 200:
-            soup = BeautifulSoup(res.text, 'html.parser')
-            messages = soup.find_all('div', class_='tgme_widget_message_text')
-            return messages[-1].text if messages else ""
-    except:
-        return ""
-
 if __name__ == "__main__":
     sell, buy = get_real_price()
-    
     if sell and buy:
-        sell_str, buy_str = f"{sell:,}", f"{buy:,}"
-        last_msg = get_last_channel_message()
-        
-        if sell_str in last_msg and buy_str in last_msg:
-            print(f"⏸️ السعر ثابت ({sell}/{buy})")
-        else:
-            message = (
-                f"💵 *تحديث سعر الدولار الآن*\n\n"
-                f"📍 *بورصة الكفاح🔺*\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"📈 *البيع:* {sell_str} دينار\n"
-                f"📉 *الشراء:* {buy_str} دينار\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"المصدر: dollar-iraq.com"
-            )
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
-                          json={"chat_id": CHANNEL_ID, "text": message, "parse_mode": "Markdown"})
-            print(f"✅ تم النشر: {sell} بيع / {buy} شراء")
+        print(f"✅ تم سحب الأسعار: {sell} بيع / {buy} شراء")
+        # .. (باقي كود النشر تليجرام) ..
+    else:
+        print("❌ فشل سحب البيانات - حاول تغيير الموقع أو المصدر.")
