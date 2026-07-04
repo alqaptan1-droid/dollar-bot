@@ -12,7 +12,9 @@ CHANNEL_ID = "@DollarNowIQ"
 def get_real_price():
     sites = {"Iraq-Prices": "https://iraqprices.com"}
     scraper = cloudscraper.create_scraper()
-    arabic_digits = '٠١٢٣٤٥٤٦٧٨٩'
+    
+    # تصحيح الأرقام: كل رقم عربي يقابله رقم إنجليزي واحد
+    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
     english_digits = '0123456789'
     trans_table = str.maketrans(arabic_digits, english_digits)
     
