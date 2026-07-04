@@ -12,7 +12,6 @@ CHANNEL_ID = "@DollarNowIQ"
 def get_real_price():
     # وضعنا المصادر في قاموس لنعرف اسم الموقع بسهولة
     sites = {
-        "Dollar-Iraq": "https://dollar-iraq.com", 
         "Iraq-Prices": "https://iraqprices.com"
     }
     scraper = cloudscraper.create_scraper()
@@ -69,15 +68,14 @@ if __name__ == "__main__":
         
         if sell_str in last_message and buy_str in last_message:
             print(f"⏸️ السعر مطابق لآخر رسالة ({sell}/{buy}).")
-        else:
+else:
+            # هنا التنسيق الجديد الذي طلبته
+            # ملاحظة: {sell * 100:,} يعني السعر مضروب في 100 (لتحويل الـ 15.58 إلى 155,800)
             message = (
                 f"💵 *تحديث سعر الدولار الآن*\n\n"
-                f"📍 *بورصة الكفاح🔺*\n"
+                f"📍¦ *بورصة الكفاح*🔺\n"
+                f"🔻¦ {sell_str} دينار ➔ {sell * 100:,}\n"
                 f"━━━━━━━━━━━━━━━━━\n"
-                f"📈 *البيع:* {sell_str} دينار\n"
-                f"📉 *الشراء:* {buy_str} دينار\n"
-                f"━━━━━━━━━━━━━━━━━\n"
-                f"المصدر: {source}\n"
                 f"https://t.me/DollarNowIQ"
             )
             
@@ -85,6 +83,6 @@ if __name__ == "__main__":
                 f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
                 json={"chat_id": CHANNEL_ID, "text": message, "parse_mode": "Markdown"}
             )
-            print(f"✅ تم النشر بنجاح: {sell} بيع / {buy} شراء")
-    else:
+            print(f"✅ تم النشر بنجاح: {sell} بيع")
+            else:
         print("❌ لم يتم العثور على أسعار مطابقة.")
