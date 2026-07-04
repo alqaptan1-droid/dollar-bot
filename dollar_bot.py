@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = "@DollarNowIQ"
-URL = "https://iraqprices.com/"
+URL = "https://dollar-iraq.com/"
 
 def get_real_price():
     scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'windows', 'desktop': True})
