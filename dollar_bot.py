@@ -8,11 +8,7 @@ from bs4 import BeautifulSoup
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = "@DollarNowIQ"
 
-# ================= دالة سحب الأسعار =================
-
-
-
-
+# ================= دالة سحب الأسعار الدقيقة =================
 def get_real_price():
     urls = ["https://dollar-iraq.com", "https://iraqprices.com"]
     scraper = cloudscraper.create_scraper()
@@ -26,27 +22,47 @@ def get_real_price():
         try:
             res = scraper.get(url, timeout=15)
             if res.status_code == 200:
-                # تحويل الأرقام العربية لإنجليزية ومسح الفواصل
-                text = res.text.translate(trans_table).replace("،", "").replace(".", "")
+                # تحويل الأرقام العربية إلى إنجليزية وإزالة الفواصل
+                text = res.text.translate(trans_table).replace("،", "").replace(",", "").replace(".", "")
                 
-                # نبحث عن كلمة "الكفاح"
+                # البحث عن قسم "الكفاح" حصراً
                 if "الكفاح" in text:
-                    # نحدد موقع الكلمة
                     idx = text.find("الكفاح")
-                    # نقتطع بس 200 حرف بعد كلمة الكفاح (حتى نتجاهل باقي المحافظات والأخبار)
-                    context = text[idx:idx+200]
+                    # اقتطاع 150 حرف فقط بعد كلمة الكفاح (لضمان عدم التداخل مع أسعار أخرى)
+                    context = text[idx:idx+150]
                     
-                    # هسه نستخرج الأرقام من هذا المربع الصغير فقط
-                    prices = re.findall(r'15[3-6]\d', context)
+                    # استخراج الأرقام التي تبدأ بـ 15 وتتكون من 4 مراتب (مثل 1543, 1538)
+                    prices = re.findall(r'15\d{2}', context)
                     
                     if len(prices) >= 2:
+                        # إزالة التكرار وترتيب الأرقام من الأصغر للأكبر
                         prices = sorted(list(set([int(p) for p in prices])))
-                        return prices[-1], prices[0] # الأعلى بيع والأقل شراء من ضمن الكفاح فقط
+                        # أعلى رقم هو البيع، وأقل رقم هو الشراء
+                        return prices[-1], prices[0]
+                    elif len(prices) == 1:
+                        # في حال الموقع الثاني عرض سعر واحد فقط
+                        return int(prices[0]), int(prices[0])
         except Exception as e:
-            print(f"Error fetching {url}: {e}")
+            print(f"Error reading {url}: {e}")
             continue
     return None, None
-# ================= دالة النشر للقناة =================
+
+# ================= دالة قراءة آخر رسالة بالقناة =================
+def get_last_channel_message():
+    try:
+        scraper = cloudscraper.create_scraper()
+        channel_name = CHANNEL_ID.replace("@", "")
+        res = scraper.get(f"https://t.me/s/{channel_name}")
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            messages = soup.find_all('div', class_='tgme_widget_message_text')
+            if messages:
+                return messages[-1].text
+    except Exception:
+        pass
+    return ""
+
+# ================= نقطة التشغيل والنشر =================
 if __name__ == "__main__":
     sell, buy = get_real_price()
     
@@ -54,13 +70,14 @@ if __name__ == "__main__":
         sell_str = f"{sell:,}"
         buy_str = f"{buy:,}"
         
-        # نقرأ آخر رسالة بالقناة
+        # قراءة آخر رسالة
         last_message = get_last_channel_message()
         
-        # نقارن: إذا السعرين موجودات بآخر رسالة، معناها السعر ما تغير
+        # إذا السعر ما تغير، ما ينشر شي
         if sell_str in last_message and buy_str in last_message:
-            print(f"⏸️ السعر ما تغير ({sell}/{buy}). ماكو داعي ننشر رسالة جديدة.")
+            print(f"⏸️ السعر مطابق لآخر رسالة ({sell}/{buy}). لن يتم النشر.")
         else:
+            # إذا السعر جديد، ينشر الكليشة
             message = (
                 f"💵 *تحديث سعر الدولار الآن*\n\n"
                 f"📍 *بورصة الكفاح🔺*\n"
@@ -77,4 +94,4 @@ if __name__ == "__main__":
             )
             print(f"✅ تم النشر بالقناة بنجاح: {sell} بيع / {buy} شراء")
     else:
-        print("❌ لم يتم العثور على أسعار.")
+        print("❌ لم يتم العثور على أسعار مطابقة.")
