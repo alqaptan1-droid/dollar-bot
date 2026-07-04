@@ -1,15 +1,14 @@
 name: Run Dollar Bot
 on:
-  schedule:
-    - cron: '*/10 * * * *'
+  push:
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
