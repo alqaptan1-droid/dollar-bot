@@ -66,7 +66,7 @@ if __name__ == "__main__":
         else:
             message = (
                 f"💵 *تحديث سعر الدولار الآن*\n\n"
-                f"📍¦ *بورصة الكفاح*🔺\n"
+                f"📍¦ *بورصة الكفاح*\n"
                 f"🔻¦ {sell_str} دينار ➔ {sell * 100:,}\n"
                 f"━━━━━━━━━━━━━━━━━\n"
                 f"https://t.me/DollarNowIQ"
