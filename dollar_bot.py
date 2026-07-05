@@ -1,79 +1,148 @@
 import os
-import re
 import requests
-import cloudscraper
-from bs4 import BeautifulSoup
 
-# ================= الإعدادات =================
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHANNEL_ID = "@DollarNowIQ"
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHANNEL_ID = os.getenv("CHANNEL_ID")
 
-# ================= دالة سحب الأسعار =================
+
+# ================= جلب السعر =================
 def get_real_price():
-    sites = {"Iraq-Prices": "https://iraqprices.com"}
-    scraper = cloudscraper.create_scraper()
-    
-    # تصحيح الأرقام: كل رقم عربي يقابله رقم إنجليزي واحد
-    arabic_digits = '٠١٢٣٤٥٦٧٨٩'
-    english_digits = '0123456789'
-    trans_table = str.maketrans(arabic_digits, english_digits)
-    
-    for name, url in sites.items():
-        try:
-            res = scraper.get(url, timeout=15)
-            if res.status_code == 200:
-                soup = BeautifulSoup(res.text, 'html.parser')
-                clean_text = soup.get_text(separator=" ").translate(trans_table).replace("،", "").replace(",", "").replace(".", "")
-                
-                if "الكفاح" in clean_text:
-                    idx = clean_text.find("الكفاح")
-                    context = clean_text[idx:idx+150]
-                    prices = re.findall(r'15\d{2}', context)
-                    
-                    if len(prices) >= 2:
-                        prices = sorted(list(set([int(p) for p in prices])))
-                        return prices[-1], prices[0], name 
-        except Exception as e:
-            print(f"Error reading {name}: {e}")
-            continue
-    return None, None, None
 
-# ================= دالة قراءة آخر رسالة =================
-def get_last_channel_message():
+    # المصدر الأساسي
     try:
-        scraper = cloudscraper.create_scraper()
-        channel_name = CHANNEL_ID.replace("@", "")
-        res = scraper.get(f"https://t.me/s/{channel_name}")
-        if res.status_code == 200:
-            soup = BeautifulSoup(res.text, 'html.parser')
-            messages = soup.find_all('div', class_='tgme_widget_message_text')
-            return messages[-1].text if messages else ""
-    except:
-        pass
-    return ""
+
+        response = requests.get(
+            "https://prices-api.alawe6663.workers.dev/prices",
+            timeout=10
+        )
+
+        data = response.json()
+
+        price = data["dollar"]["parallel"]
+
+        print(f"المصدر: IraqPrices")
+        print(f"السعر: {price}")
+
+        return price, "IraqPrices"
+
+    except Exception as e:
+
+        print(f"فشل المصدر الأساسي: {e}")
 
 
-# ================= نقطة التشغيل =================
-if __name__ == "__main__":
-    sell, buy, source = get_real_price()
-    
-    if sell and buy:
-        print(f"📡 تم جلب الأسعار بنجاح من موقع: {source}")
-        sell_str = f"{sell:,}"
-        
-        # قمنا بحذف شرط المقارنة (last_message) تماماً
-        message = (
-            f"💵 *تحديث سعر الدولار الآن*\n\n"
-            f"📍¦ *بورصة الكفاح*\n"
-            f"🔻¦ {sell_str} دينار ➔ {sell * 100:,}\n"
-            f"━━━━━━━━━━━━━━━━━\n"
-            f"https://t.me/DollarNowIQ"
+    # المصدر الاحتياطي
+    try:
+
+        response = requests.get(
+            "https://market-rate.m-tbeshe.workers.dev/",
+            timeout=10
         )
-        
-        requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", 
-            json={"chat_id": CHANNEL_ID, "text": message, "parse_mode": "Markdown"}
+
+        data = response.json()
+
+        price = data["kifah"]
+
+        print(f"المصدر: MarketRate")
+        print(f"السعر: {price}")
+
+        return price, "MarketRate"
+
+    except Exception as e:
+
+        print(f"فشل المصدر الاحتياطي: {e}")
+
+    return None, None
+
+
+# ================= إرسال =================
+def send_message(message):
+
+    try:
+
+        response = requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={
+                "chat_id": CHANNEL_ID,
+                "text": message,
+                "parse_mode": "Markdown"
+            }
         )
-        print(f"✅ تم النشر بنجاح: {sell}")
+
+        print(
+            f"الإرسال: {response.status_code}"
+        )
+
+        return response.status_code == 200
+
+    except Exception as e:
+
+        print(f"خطأ الإرسال: {e}")
+
+        return False
+
+
+# ================= التشغيل =================
+if __name__=="__main__":
+
+    price,source = get_real_price()
+
+    if price:
+
+        last_price=None
+
+        if os.path.exists(
+            "last_price.txt"
+        ):
+
+            with open(
+                "last_price.txt",
+                "r"
+            ) as f:
+
+                try:
+
+                    last_price=int(
+                        f.read().strip()
+                    )
+
+                except:
+                    pass
+
+
+        print(f"الحالي: {price}")
+        print(f"السابق: {last_price}")
+
+
+        if price != last_price:
+
+            message=(
+
+                f"💵 *تحديث سعر الدولار الآن*\n\n"
+                f"📍¦ *بورصة الكفاح*\n"
+                f"🔻¦ {price:,} دينار ➜ {price*100:,}\n"
+                f"━━━━━━━━━━━━━━━━━\n"
+                f"📡 المصدر: {source}\n"
+                f"https://t.me/DollarNowIQ"
+
+            )
+
+            if send_message(message):
+
+                with open(
+                    "last_price.txt",
+                    "w"
+                ) as f:
+
+                    f.write(
+                        str(price)
+                    )
+
+                print("تم النشر")
+
+        else:
+
+            print("السعر لم يتغير")
+
     else:
-        print("❌ لم يتم العثور على أسعار مطابقة.")
+
+        print("فشل جلب السعر")
