@@ -32,7 +32,7 @@ jobs:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         run: |
-          python dollar_bot.py
+          python bot.py
 
       - name: Save last price
         run: |
