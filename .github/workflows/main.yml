@@ -1,26 +1,41 @@
-name: Run Dollar Bot
+name: Run Telegram Bot
+
 on:
-  push:
-    branches:
-      - main
   schedule:
-    - cron: '0 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
-  build:
+  run-bot:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Download files
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: Install Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
-      - name: Install dependencies
-        run: pip install requests cloudscraper beautifulsoup4
-      - name: Run script
+          python-version: "3.11"
+
+      - name: Install packages
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: python dollar_bot.py
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+        run: |
+          python bot.py
+
+      - name: Save last price
+        run: |
+          git add .
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update last price"
+          git push
