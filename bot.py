@@ -83,12 +83,13 @@ if __name__ == "__main__":
 
         if price != last_price:
             message = (
-                f"💵 *تحديث سعر الدولار الآن*\n\n"
-                f"📍¦ *بورصة الكفاح*\n"
-                f"🔻¦ {price:,} دينار ➜ {price*100:,}\n"
+                f"🟢 *تحديث سعر الدولار الآن*\n\n"
+                f"📍 *بورصة الكفاح *\n"
+                f"💵 الـ 100 دولار ➜ *{price*100:,}* دينار\n"
+                f"🔸 السعر المفرد ➜ *{price:,}* دينار\n\n"
                 f"━━━━━━━━━━━━━━━━━\n"
-                f"https://t.me/DollarNowIQ"
-            )
+                f"🔗 https://t.me/DollarNowIQ"
+             )
 
             if send_message(message):
                 with open("last_price.txt", "w") as f:
